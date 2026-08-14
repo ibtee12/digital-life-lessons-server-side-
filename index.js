@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import { MongoClient, ServerApiVersion } from 'mongodb';
 import { createAuthRouter } from './routes/authRoutes.js';
 import { createLessonRouter } from './routes/lessonRoutes.js';
+import { createInteractionRouter } from './routes/interactionRoutes.js';
 
 dotenv.config();
 
@@ -44,9 +45,10 @@ async function run() {
 
     console.log("Connected successfully to MongoDB Atlas database: digital_life_lessons");
 
-    // Mount Routes
+    // Mount Routers
     app.use('/api/auth', createAuthRouter(usersCollection));
     app.use('/api/lessons', createLessonRouter(lessonsCollection));
+    app.use('/api/lessons', createInteractionRouter(lessonsCollection, favoritesCollection, commentsCollection, reportsCollection));
 
   } catch (error) {
     console.error("MongoDB Connection Error:", error);

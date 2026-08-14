@@ -2,7 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
-import { MongoClient, ServerApiVersion, ObjectId } from 'mongodb';
+import { MongoClient, ServerApiVersion } from 'mongodb';
+import { createAuthRouter } from './routes/authRoutes.js';
 
 dotenv.config();
 
@@ -31,11 +32,9 @@ let db, usersCollection, lessonsCollection, reportsCollection, favoritesCollecti
 
 async function run() {
   try {
-    // Connect client
     await client.connect();
     db = client.db("digital_life_lessons");
 
-    // Collections
     usersCollection = db.collection("users");
     lessonsCollection = db.collection("lessons");
     reportsCollection = db.collection("lessonsReports");
@@ -43,6 +42,10 @@ async function run() {
     commentsCollection = db.collection("comments");
 
     console.log("Connected successfully to MongoDB Atlas database: digital_life_lessons");
+
+    // Mount Authentication Routes
+    app.use('/api/auth', createAuthRouter(usersCollection));
+
   } catch (error) {
     console.error("MongoDB Connection Error:", error);
   }
@@ -57,9 +60,6 @@ app.get('/', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
-
-// Export collections getter for modular routes
-export { db, usersCollection, lessonsCollection, reportsCollection, favoritesCollection, commentsCollection };
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);

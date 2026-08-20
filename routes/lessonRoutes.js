@@ -1,6 +1,7 @@
 import express from 'express';
 import { ObjectId } from 'mongodb';
 import { verifyToken } from '../middleware/auth.js';
+import { validateLessonPayload } from '../middleware/validator.js';
 
 export function createLessonRouter(lessonsCollection) {
   const router = express.Router();
@@ -94,13 +95,9 @@ export function createLessonRouter(lessonsCollection) {
   });
 
   // POST /api/lessons — Create Life Lesson (Protected Route)
-  router.post('/', verifyToken, async (req, res) => {
+  router.post('/', verifyToken, validateLessonPayload, async (req, res) => {
     try {
       const { title, description, content, category, emotionalTone, image, accessLevel, visibility } = req.body;
-
-      if (!title || !description || !category || !emotionalTone) {
-        return res.status(400).json({ success: false, message: 'Required fields missing.' });
-      }
 
       // Enforce Free user constraint: Only Premium users can create Premium access level lessons
       const finalAccessLevel = req.user.isPremium ? (accessLevel || 'Free') : 'Free';
@@ -140,7 +137,7 @@ export function createLessonRouter(lessonsCollection) {
   });
 
   // PUT /api/lessons/:id — Update Lesson (Protected Route)
-  router.put('/:id', verifyToken, async (req, res) => {
+  router.put('/:id', verifyToken, validateLessonPayload, async (req, res) => {
     try {
       const { id } = req.params;
       let query;

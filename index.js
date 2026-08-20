@@ -8,19 +8,21 @@ import { createLessonRouter } from './routes/lessonRoutes.js';
 import { createInteractionRouter } from './routes/interactionRoutes.js';
 import { createAdminRouter } from './routes/adminRoutes.js';
 import { createPaymentRouter } from './routes/paymentRoutes.js';
+import { rateLimiter, authRateLimiter } from './middleware/rateLimiter.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// Global Middleware
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true
 }));
 app.use(express.json());
 app.use(cookieParser());
+app.use(rateLimiter({ windowMs: 15 * 60 * 1000, max: 200 }));
 
 // MongoDB Client Setup
 const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/digital_life_lessons";
@@ -48,7 +50,7 @@ async function run() {
     console.log("Connected successfully to MongoDB Atlas database: digital_life_lessons");
 
     // Mount Routers
-    app.use('/api/auth', createAuthRouter(usersCollection));
+    app.use('/api/auth', authRateLimiter, createAuthRouter(usersCollection));
     app.use('/api/lessons', createLessonRouter(lessonsCollection));
     app.use('/api/lessons', createInteractionRouter(lessonsCollection, favoritesCollection, commentsCollection, reportsCollection));
     app.use('/api/admin', createAdminRouter(usersCollection, lessonsCollection, reportsCollection));

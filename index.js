@@ -9,6 +9,7 @@ import { createInteractionRouter } from './routes/interactionRoutes.js';
 import { createAdminRouter } from './routes/adminRoutes.js';
 import { createPaymentRouter } from './routes/paymentRoutes.js';
 import { createAnalyticsRouter } from './routes/analyticsRoutes.js';
+import { createCreatorRouter } from './routes/creatorRoutes.js';
 import { rateLimiter, authRateLimiter } from './middleware/rateLimiter.js';
 import { notFoundHandler, globalErrorHandler } from './middleware/errorHandler.js';
 
@@ -57,6 +58,7 @@ async function run() {
     app.use('/api/lessons', createInteractionRouter(lessonsCollection, favoritesCollection, commentsCollection, reportsCollection));
     app.use('/api/admin', createAdminRouter(usersCollection, lessonsCollection, reportsCollection));
     app.use('/api/analytics', createAnalyticsRouter(lessonsCollection, usersCollection));
+    app.use('/api/creators', createCreatorRouter(lessonsCollection, usersCollection));
     app.use('/api', createPaymentRouter(usersCollection));
 
   } catch (error) {

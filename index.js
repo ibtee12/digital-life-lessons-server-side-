@@ -8,6 +8,7 @@ import { createLessonRouter } from './routes/lessonRoutes.js';
 import { createInteractionRouter } from './routes/interactionRoutes.js';
 import { createAdminRouter } from './routes/adminRoutes.js';
 import { createPaymentRouter } from './routes/paymentRoutes.js';
+import { createAnalyticsRouter } from './routes/analyticsRoutes.js';
 import { rateLimiter, authRateLimiter } from './middleware/rateLimiter.js';
 
 dotenv.config();
@@ -54,6 +55,7 @@ async function run() {
     app.use('/api/lessons', createLessonRouter(lessonsCollection));
     app.use('/api/lessons', createInteractionRouter(lessonsCollection, favoritesCollection, commentsCollection, reportsCollection));
     app.use('/api/admin', createAdminRouter(usersCollection, lessonsCollection, reportsCollection));
+    app.use('/api/analytics', createAnalyticsRouter(lessonsCollection, usersCollection));
     app.use('/api', createPaymentRouter(usersCollection));
 
   } catch (error) {

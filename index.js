@@ -10,6 +10,7 @@ import { createAdminRouter } from './routes/adminRoutes.js';
 import { createPaymentRouter } from './routes/paymentRoutes.js';
 import { createAnalyticsRouter } from './routes/analyticsRoutes.js';
 import { rateLimiter, authRateLimiter } from './middleware/rateLimiter.js';
+import { notFoundHandler, globalErrorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
 
@@ -72,6 +73,10 @@ app.get('/', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Centralized 404 and Global Error Middlewares
+app.use(notFoundHandler);
+app.use(globalErrorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);

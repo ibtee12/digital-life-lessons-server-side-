@@ -365,22 +365,57 @@ async function seed() {
 
     const db = client.db('digital_life_lessons');
 
-    // 1. Seed Users Collection
+    // 1. Seed 'users' Collection
     const usersCol = db.collection('users');
     await usersCol.deleteMany({});
     const userInsertResult = await usersCol.insertMany(SAMPLE_USERS);
     console.log(`Seeded ${userInsertResult.insertedCount} users into 'users' collection.`);
 
-    // 2. Seed Lessons Collection
+    // 2. Seed 'lessons' Collection
     const lessonsCol = db.collection('lessons');
     await lessonsCol.deleteMany({});
     const lessonInsertResult = await lessonsCol.insertMany(SAMPLE_LESSONS);
     console.log(`Seeded ${lessonInsertResult.insertedCount} lessons into 'lessons' collection.`);
 
-    // 3. Clear and initialize Reports Collection
-    const reportsCol = db.collection('reports');
+    // 3. Seed 'lessonsReports' Collection
+    const reportsCol = db.collection('lessonsReports');
     await reportsCol.deleteMany({});
-    console.log("Initialized clean 'reports' collection.");
+    console.log("Initialized clean 'lessonsReports' collection.");
+
+    // 4. Seed 'favorites' Collection
+    const favoritesCol = db.collection('favorites');
+    await favoritesCol.deleteMany({});
+    const sampleFavorites = [
+      { userId: "user-marcus", lessonId: "lesson-1", savedAt: new Date().toISOString() },
+      { userId: "user-marcus", lessonId: "lesson-2", savedAt: new Date().toISOString() },
+      { userId: "user-sarah", lessonId: "lesson-4", savedAt: new Date().toISOString() }
+    ];
+    await favoritesCol.insertMany(sampleFavorites);
+    console.log("Seeded 'favorites' collection.");
+
+    // 5. Seed 'comments' Collection
+    const commentsCol = db.collection('comments');
+    await commentsCol.deleteMany({});
+    const sampleComments = [
+      {
+        lessonId: "lesson-1",
+        userId: "user-sarah",
+        userName: "Sarah Lin",
+        userPhoto: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80",
+        text: "This transformed how I handle client scope creep. The standard scripts are gold!",
+        createdAt: new Date("2026-08-02T14:20:00Z").toISOString()
+      },
+      {
+        lessonId: "lesson-4",
+        userId: "user-marcus",
+        userName: "Marcus Vance",
+        userPhoto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
+        text: "Owning equity is the ultimate unlock. Essential wisdom for modern creators.",
+        createdAt: new Date("2026-08-06T10:15:00Z").toISOString()
+      }
+    ];
+    await commentsCol.insertMany(sampleComments);
+    console.log("Seeded 'comments' collection.");
 
     console.log("\nDatabase Seeding Completed Successfully! All 12 lessons with bespoke life lesson images are live.");
   } catch (err) {

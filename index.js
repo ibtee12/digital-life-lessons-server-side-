@@ -20,8 +20,19 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Global Middleware
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'http://localhost:5173',
+  'http://localhost:3000'
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || origin.includes('localhost') || origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
   credentials: true
 }));
 app.use(express.json());
@@ -29,7 +40,7 @@ app.use(cookieParser());
 app.use(rateLimiter({ windowMs: 15 * 60 * 1000, max: 200 }));
 
 // MongoDB Client Setup
-const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/digital_life_lessons";
+const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -38,22 +49,29 @@ const client = new MongoClient(uri, {
   }
 });
 
-let db, usersCollection, lessonsCollection, reportsCollection, favoritesCollection, commentsCollection;
-
-async function run() {
+async function startServer() {
   try {
     await client.connect();
-    db = client.db("digital_life_lessons");
+    const db = client.db("digital_life_lessons");
 
-    usersCollection = db.collection("users");
-    lessonsCollection = db.collection("lessons");
-    reportsCollection = db.collection("lessonsReports");
-    favoritesCollection = db.collection("favorites");
-    commentsCollection = db.collection("comments");
+    const usersCollection = db.collection("users");
+    const lessonsCollection = db.collection("lessons");
+    const reportsCollection = db.collection("lessonsReports");
+    const favoritesCollection = db.collection("favorites");
+    const commentsCollection = db.collection("comments");
 
-    console.log("Connected successfully to MongoDB Atlas database: digital_life_lessons");
+    console.log("✅ Connected successfully to MongoDB Atlas database: digital_life_lessons");
 
-    // Mount Routers
+    // Root Health Check Route
+    app.get('/', (req, res) => {
+      res.json({
+        status: 'OK',
+        message: 'Digital Life Lessons API Server is running smoothly with MongoDB Atlas.',
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    // Mount API Routers
     app.use('/api/auth', authRateLimiter, createAuthRouter(usersCollection));
     app.use('/api/lessons', createLessonRouter(lessonsCollection));
     app.use('/api/lessons', createInteractionRouter(lessonsCollection, favoritesCollection, commentsCollection, reportsCollection));
@@ -63,25 +81,18 @@ async function run() {
     app.use('/api/health', createHealthRouter(db));
     app.use('/api', createPaymentRouter(usersCollection));
 
+    // Centralized 404 and Global Error Middlewares
+    app.use(notFoundHandler);
+    app.use(globalErrorHandler);
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Digital Life Lessons Backend listening on port ${PORT}`);
+    });
+
   } catch (error) {
-    console.error("MongoDB Connection Error:", error);
+    console.error("❌ MongoDB Connection Error:", error);
+    process.exit(1);
   }
 }
-run().catch(console.dir);
 
-// Root Health Check Route
-app.get('/', (req, res) => {
-  res.json({
-    status: 'OK',
-    message: 'Digital Life Lessons API Server is running smoothly.',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Centralized 404 and Global Error Middlewares
-app.use(notFoundHandler);
-app.use(globalErrorHandler);
-
-app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
-});
+startServer();

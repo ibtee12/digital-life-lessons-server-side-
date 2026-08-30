@@ -144,5 +144,71 @@ export function createAuthRouter(usersCollection) {
     }
   });
 
+  // Upgrade to Premium Endpoint (Direct Sync)
+  router.post('/upgrade-premium', async (req, res) => {
+    try {
+      const { email, name, photo } = req.body;
+      if (!email) {
+        return res.status(400).json({ success: false, message: 'Email is required' });
+      }
+
+      await usersCollection.updateOne(
+        { email },
+        { 
+          $set: { 
+            isPremium: true,
+            premiumPurchasedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          },
+          $setOnInsert: {
+            name: name || email.split('@')[0],
+            photo: photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+            role: 'user',
+            createdAt: new Date().toISOString()
+          }
+        },
+        { upsert: true }
+      );
+
+      const user = await usersCollection.findOne({ email });
+      res.json({ success: true, message: 'Upgraded to Premium in MongoDB Atlas', user });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
+  // Sync User on Login/Register (Upsert to MongoDB Atlas)
+  router.post('/sync-user', async (req, res) => {
+    try {
+      const { uid, email, name, photo, role, isPremium } = req.body;
+      if (!email) {
+        return res.status(400).json({ success: false, message: 'Email is required' });
+      }
+
+      const existing = await usersCollection.findOne({ email });
+
+      const updateDoc = {
+        $set: {
+          uid: uid || existing?.uid,
+          name: name || existing?.name || email.split('@')[0],
+          photo: photo || existing?.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+          role: existing?.role || role || (email.toLowerCase().includes('admin') ? 'admin' : 'user'),
+          isPremium: existing?.isPremium !== undefined ? existing.isPremium : (isPremium || false),
+          updatedAt: new Date().toISOString()
+        },
+        $setOnInsert: {
+          createdAt: new Date().toISOString()
+        }
+      };
+
+      await usersCollection.updateOne({ email }, updateDoc, { upsert: true });
+      const user = await usersCollection.findOne({ email });
+
+      res.json({ success: true, message: 'User synced with MongoDB Atlas', user });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
   return router;
 }

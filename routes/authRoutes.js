@@ -69,7 +69,7 @@ export function createAuthRouter(usersCollection) {
           name: email.split('@')[0],
           email,
           photo: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-          role: email.includes('admin') ? 'admin' : 'user',
+          role: email.toLowerCase().trim() === 'admin@digitallife.com' ? 'admin' : 'user',
           isPremium: email.includes('premium'),
           createdAt: new Date().toISOString()
         };
@@ -192,7 +192,7 @@ export function createAuthRouter(usersCollection) {
           uid: uid || existing?.uid,
           name: name || existing?.name || email.split('@')[0],
           photo: photo || existing?.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-          role: existing?.role || role || (email.toLowerCase().includes('admin') ? 'admin' : 'user'),
+          role: existing?.role || role || (email.toLowerCase().trim() === 'admin@digitallife.com' ? 'admin' : 'user'),
           isPremium: existing?.isPremium !== undefined ? existing.isPremium : (isPremium || false),
           updatedAt: new Date().toISOString()
         },

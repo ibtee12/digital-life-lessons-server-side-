@@ -1,124 +1,129 @@
 # ⚡ Digital Life Lessons — Server Side API Engine
 
-> Production Node.js & Express backend for **Digital Life Lessons** — a modern, editorial wisdom-sharing platform. Backed by MongoDB Atlas with JWT token verification, dynamic query pipelines, rate limiting, and Stripe payment webhooks.
+<div align="center">
+  <h3>🛡️ High-Performance REST API Engine for Digital Life Lessons</h3>
+  <p>Node.js & Express API connected to MongoDB Atlas with JWT token verification, dynamic aggregation pipelines, sliding-window rate limiting, and Stripe payment processing.</p>
+  
+  <p>
+    <a href="https://digital-life-lessons-server-side.onrender.com" target="_blank">
+      <img src="https://img.shields.io/badge/Live_API-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white" alt="Render API" />
+    </a>
+    <a href="https://cloud.mongodb.com" target="_blank">
+      <img src="https://img.shields.io/badge/Database-MongoDB_Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB Atlas" />
+    </a>
+  </p>
+</div>
 
 ---
 
-## 🛠️ Architecture Overview
+## 🛠️ Architecture & Core Components
 
-### 1. Security & Middleware Layer
-- **`middleware/auth.js`**: JWT / Better Auth token verification (`verifyToken`) and administrative permission checks (`verifyAdmin`).
-- **`middleware/rateLimiter.js`**: In-memory sliding-window rate limiting (`rateLimiter`: 200 req / 15 min; `authRateLimiter`: 20 auth attempts / 15 min with `Retry-After` header).
-- **`middleware/validator.js`**: Payload validation and XSS string sanitization for lesson submissions.
+### 1. Security & Middleware Pipeline
+- **`middleware/auth.js`**: JWT / Admin header verification (`verifyToken` & `verifyAdmin`).
+- **`middleware/rateLimiter.js`**: Sliding-window rate limiter protecting against DDoS and brute-force attacks (200 req / 15 min; Auth: 20 req / 15 min).
+- **`middleware/validator.js`**: Schema validation & string sanitization for lesson creation payloads.
 - **`middleware/errorHandler.js`**: Centralized 404 handler and global exception wrapper.
 
-### 2. MongoDB Atlas Collections
-- **`users`**: User identity, roles (`user` / `admin`), and `isPremium` status.
-- **`lessons`**: Wisdom entries with visibility (`Public` / `Private`), access level (`Free` / `Premium`), likes array, and engagement counters.
-- **`lessonsReports`**: Community flags with reporter information, reasons, and timestamps.
-- **`favorites`**: User bookmarked wisdom entries.
-- **`comments`**: Threaded lesson reflections and discussions.
+### 2. MongoDB Atlas Collections (`digital_life_lessons`)
+- **`users`**: Member identity, role (`user` / `admin`), and lifetime `isPremium` status.
+- **`lessons`**: Wisdom reflections with category, emotional tone, visibility (`Public`/`Private`), access level (`Free`/`Premium`), curated imagery, likes array, and engagement counters.
+- **`lessonsReports`**: Flagged lesson moderation queue with reporter details, reason codes, and timestamps.
+- **`favorites`**: Saved lesson bookmarks by user.
+- **`comments`**: Threaded discussion reflections.
 
 ---
 
-## 📡 Complete REST API Specifications
+## 📡 REST API Specifications
 
-### Authentication (`/api/auth`)
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `POST` | `/api/auth/register` | Register new user account | Public (Rate Limited) |
-| `POST` | `/api/auth/login` | Login user & issue JWT token cookie | Public (Rate Limited) |
-| `POST` | `/api/auth/logout` | Clear authentication session cookie | Public |
-| `GET` | `/api/auth/me` | Fetch authenticated user profile | Private (`verifyToken`) |
-| `PATCH` | `/api/auth/profile` | Update user display name & photo | Private (`verifyToken`) |
+### Public Endpoints
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/` | Root Health Check & MongoDB status |
+| `GET` | `/api/lessons` | List public lessons (supports `?category=`, `?tone=`, `?search=`, `?sort=`) |
+| `GET` | `/api/lessons/featured` | Fetch weekly editorial wisdom picks |
+| `GET` | `/api/lessons/top-saved` | Fetch most bookmarked lessons |
+| `GET` | `/api/lessons/:id` | Fetch full lesson details |
+| `GET` | `/api/creators/:id` | Fetch author public profile & metrics |
+| `GET` | `/api/health` | Memory usage & uptime diagnostics |
 
-### Life Lessons & Query Pipeline (`/api/lessons`)
-| Method | Endpoint | Query / Body | Description | Access |
-|---|---|---|---|---|
-| `GET` | `/api/lessons` | `search`, `category`, `emotionalTone`, `sort`, `page`, `limit` | Search & filter public wisdom | Public |
-| `GET` | `/api/lessons/:id` | `id` | Single lesson details + increment view | Public |
-| `POST` | `/api/lessons` | `title`, `description`, `content`, `category`, `emotionalTone`, `accessLevel` | Create lesson (Free user gated to Free) | Private (`verifyToken`, `validateLessonPayload`) |
-| `PUT` | `/api/lessons/:id` | `title`, `description`, etc. | Update existing lesson | Private (Owner/Admin) |
-| `DELETE` | `/api/lessons/:id` | `id` | Delete lesson permanently | Private (Owner/Admin) |
+### Member Endpoints (Authenticated)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/auth/register` | Register new member account |
+| `POST` | `/api/auth/login` | Email/Password login |
+| `POST` | `/api/auth/sync-user` | Google/Email login sync with MongoDB Atlas |
+| `POST` | `/api/auth/upgrade-premium` | Upgrade member to Lifetime VIP in MongoDB |
+| `POST` | `/api/lessons` | Publish a new life lesson |
+| `PATCH` | `/api/lessons/:id` | Edit user authored lesson |
+| `DELETE` | `/api/lessons/:id` | Delete user authored lesson |
+| `POST` | `/api/lessons/:id/like` | Toggle like reaction |
+| `POST` | `/api/lessons/:id/favorite` | Toggle bookmark in saved favorites |
+| `POST` | `/api/lessons/:id/comments` | Post a comment / reflection |
+| `POST` | `/api/lessons/:id/report` | Submit a moderation flag |
+| `POST` | `/api/create-checkout-session` | Initialize Stripe payment session |
 
-### Interactions & Reactions (`/api/lessons`)
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `POST` | `/api/lessons/:id/like` | Toggle like (updates `likes[]` array & `likesCount`) | Private (`verifyToken`) |
-| `POST` | `/api/lessons/:id/favorite` | Toggle bookmark in `favorites` collection | Private (`verifyToken`) |
-| `GET` | `/api/lessons/user/favorites` | Fetch user's saved favorites list | Private (`verifyToken`) |
-| `POST` | `/api/lessons/:id/comments` | Post reflection comment | Private (`verifyToken`) |
-| `GET` | `/api/lessons/:id/comments` | Fetch discussion comments thread | Public |
-| `POST` | `/api/lessons/:id/report` | Submit moderation report to `lessonsReports` | Private (`verifyToken`) |
-
-### Analytics & Heatmap (`/api/analytics`)
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `GET` | `/api/analytics/streak` | Aggregated user streak & active journaling days | Private (`verifyToken`) |
-| `GET` | `/api/analytics/weekly` | Weekly views and reflections time-series for Recharts | Private (`verifyToken`) |
-
-### Public Creators (`/api/creators`)
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `GET` | `/api/creators/top` | Top 6 contributors sorted by lessons & likes | Public |
-| `GET` | `/api/creators/:id` | Public author profile archive & stats | Public |
-
-### Stripe Payments & Webhooks (`/api`)
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `POST` | `/api/create-checkout-session` | Stripe checkout for ৳1500 Lifetime Premium | Private (`verifyToken`) |
-| `POST` | `/api/webhook` | Stripe event listener (sets `isPremium: true`) | Public (Stripe Signature) |
-
-### Admin Moderation (`/api/admin`)
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `GET` | `/api/admin/users` | List all platform users | Admin (`verifyAdmin`) |
-| `PATCH` | `/api/admin/users/:id/role` | Promote/demote user roles | Admin (`verifyAdmin`) |
-| `DELETE` | `/api/admin/users/:id` | Delete user account | Admin (`verifyAdmin`) |
-| `PATCH` | `/api/admin/lessons/:id/featured` | Toggle homepage Featured status | Admin (`verifyAdmin`) |
-| `GET` | `/api/admin/reports` | List reported lessons with reason logs | Admin (`verifyAdmin`) |
-| `DELETE` | `/api/admin/reports/:lessonId` | Clear reports for lesson (Ignore action) | Admin (`verifyAdmin`) |
-
-### System Health (`/api/health`)
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `GET` | `/api/health` | Memory usage, uptime, Node version & DB status | Public |
+### Admin Moderation Endpoints (Admin Only)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/admin/users` | List all platform members |
+| `PATCH` | `/api/admin/users/:id/role` | Promote/Demote user role (`admin` / `user`) |
+| `DELETE` | `/api/admin/users/:id` | Delete user account from database |
+| `PATCH` | `/api/admin/lessons/:id/featured` | Toggle editorial featured status |
+| `DELETE` | `/api/admin/lessons/:id` | Permanently remove a lesson |
+| `GET` | `/api/admin/reports` | View flagged content queue |
+| `DELETE` | `/api/admin/reports/:lessonId` | Clear moderation reports |
 
 ---
 
-## ⚙️ Environment Variables Setup
+## 💻 Local Development Setup
 
-Create a `.env` file in the server root:
+### 1. Clone & Install
+```bash
+git clone https://github.com/ibtee12/digital-life-lessons-server-side-.git
+cd digital-life-lessons-server-side-
+npm install
+```
+
+### 2. Configure Environment Variables
+Create a `.env` file in the root of the server project:
 
 ```env
 PORT=5000
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/digital_life_lessons?retryWrites=true&w=majority
-BETTER_AUTH_SECRET=a_random_32_character_secret_key_here
-STRIPE_SECRET_KEY=sk_test_51...
-STRIPE_WEBHOOK_SECRET=whsec_...
+BETTER_AUTH_SECRET=your_32_character_jwt_secret_key_here
+STRIPE_SECRET_KEY=sk_test_...
 CLIENT_URL=http://localhost:5173
 ```
 
+### 3. Seed Database with 12 Curated Lessons
+```bash
+npm run seed
+```
+
+### 4. Start Server
+```bash
+# Development mode (with auto-reload)
+npm run dev
+
+# Production mode
+npm start
+```
+Server will start on **[http://localhost:5000](http://localhost:5000)**.
+
 ---
 
-## 🚀 Setup & Local Execution
+## 🚢 Deployment to Render
 
-1. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+1. Push your server repository to GitHub.
+2. Go to **[Render](https://render.com)** ➔ **New Web Service**.
+3. Select your repository.
+4. **Build Command:** `npm install`
+5. **Start Command:** `node index.js`
+6. Add Environment Variables (`MONGODB_URI`, `CLIENT_URL`, `STRIPE_SECRET_KEY`, `BETTER_AUTH_SECRET`).
+7. Click **Deploy Web Service**.
 
-2. **Seed sample data into MongoDB Atlas**:
-   ```bash
-   npm run seed
-   ```
+---
 
-3. **Start development server with live watch**:
-   ```bash
-   npm run dev
-   ```
-
-4. **Start production server**:
-   ```bash
-   npm start
-   ```
+<div align="center">
+  <sub>API Engine for Digital Life Lessons.</sub>
+</div>
